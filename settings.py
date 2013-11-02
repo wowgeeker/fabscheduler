@@ -5,5 +5,3 @@ max_processes=20
 
 log_path='./logs'
 
-
-
