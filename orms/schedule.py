@@ -16,3 +16,10 @@ class Schedule(Base):
   
   def __init__(self,**args):
     self.__dict__.update(args)  
+  
+  def update_nextime(self,current=None):
+    if not current:
+      self.last_time=self.next_time
+      self.next_time+=span
+    else:
+      self.next_time=self.next_time+span*((current-self.next_time)/span+1)

@@ -1,54 +1,92 @@
 #-*- coding:utf-8 -*-
 import threading,time
-from orms.procedure import Procedure,Schedule
+import inspect
+
+from orms.procedure import Procedure
+from orms.schedule import Schedule
 from orms.engine import session
+from utils.log import Logger
 
 class Scheduler(threading.Thread):
   
   def __init__(self,manager):
-    threading.Thread(self)
+    threading.Thread.__init__(self)
     self.op_lock=threading.Lock()
     self.sched_procedures={}
     self.manager=manager
+    self.logger=Logger.getRuntimeLogger()
+    self.init_status=True
     
-  def update(self,procedure):
+  def __update(self,procedure):
     self.op_lock.acqure()
-    self.sched_procedures[procedure.id]=procedure    
-    self.op_lock.release()
+    try:
+      session.merge(procedure) 
+      session.commit()   
+      self.sched_procedures[procedure.id]=procedure       
+    except Exception as ex:
+      self.logger.error('[Scheduler] %s'%str(inspect.trace()))
+    finally:
+      self.op_lock.release()
   
   def delete(self,procedure_id):
     self.op_lock.acqure()
-    if procedure.id in self.sched_procedures:
-      del self.sched_procedures[procedure.id]
-    self.op_lock.release()
+    try:
+      if procedure_id in self.sched_procedures.items():
+        session.delete(sched_procedures[procedure_id])        
+        session.commit()
+        del self.sched_procedures[procedure.id]
+    except Exception as ex:
+      self.logger.error('[Scheduler] %s'%str(inspect.trace()))      
+    finally:
+      self.op_lock.release()
   
   def add(self,procedure):    
     self.op_lock.acquire()
-    if procedure.id in self.sched_procedures:
-      raise ValueError('procedure #%s is already scheduled'%procedure.id)
-    else:
-      self.sched_procedures[procedure.id]=procedure
-    self.op_lock.release()
+    try:
+      if procedure.procedure_id in self.sched_procedures.items():
+        self.__update(procedure)
+      else:
+        session.add(procedure)
+        session.commit()
+        self.sched_procedures[procedure.procedure_id]=procedure
+    except Exception as ex:
+      self.logger.error('[Scheduler] %s'%str(inspect.trace()))
+    finally:
+      self.op_lock.release()
     
-  def __getshed_procedures(self):
-    
-    pass
+  def __getsched_procedures(self):
+    scheds=session.query(Schedule).all()
+    self.sched_procedures=dict(zip([sched.procedure_id for sched in scheds],scheds))    
   
   def __available_procedures(self):
-    return []
-  
-  def __update_status(self):
-    pass
+    result=[]
+    stamp=int(time.time())
+    if not self.init_status:
+      for id,p in self.sched_procedures.items():
+        if p.next_time<=stamp:
+          p.update_nexttime()
+          result.append(p)
+          session.merge(p)
+    else:
+      for id,p in self.sched_procedures.items():
+        if p.next_time<stamp:
+          p.update_nexttime(current=stamp)
+          session.merge(p)
+          session.commit()
+      self.init_status=False 
+    return result
   
   def run(self):
-    self.__getshed_procedures()
+    self.__getsched_procedures()
     while True:
-      time.sleep(0.5)
       self.op_lock.acquire()
-      available=self.__available_procedures()
-      for p in available:
-        if self.manager.has_procedure(p):
-          continue
-        self.manager.new_procedure(p)
-      self.__update_status(available)
-      self.op_lock.release()
+      try:
+        avail_scheds=self.__available_procedures()
+        if avail_scheds:
+          for p in avail_scheds:
+            self.manager.new_procedure(p.procedure_id)
+      except Exception as ex:
+        self.logger.error('[Scheduler] %s'%str(inspect.trace()))
+      finally:
+        self.op_lock.release()
+      time.sleep(1)
