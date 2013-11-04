@@ -4,7 +4,7 @@ from engine import mysql_engine,Base
 from sqlalchemy import Column, Integer, String
 
 
-class Executions(Base):
+class Execution(Base):
   __tablename__='t_executions'
   id=Column(Integer,primary_key=True,autoincrement=True)
   procedure_id=Column(Integer)
@@ -25,4 +25,10 @@ class ExecutionObject(Base):
   
   def __init__(self,**args):
     self.__dict__.update(args)  
-    
+
+
+class ExecutionStatus:
+  FAILED=1
+  KILLED=2
+  RUNNING=3
+  READY=4  

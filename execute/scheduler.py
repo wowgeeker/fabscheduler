@@ -32,9 +32,9 @@ class Scheduler(threading.Thread):
     self.op_lock.acqure()
     try:
       if procedure_id in self.sched_procedures.items():
-        session.delete(sched_procedures[procedure_id])        
+        session.delete(self.sched_procedures[procedure_id])        
         session.commit()
-        del self.sched_procedures[procedure.id]
+        del self.sched_procedures[procedure_id]
     except Exception as ex:
       self.logger.error('[Scheduler] %s'%str(inspect.trace()))      
     finally:

@@ -8,7 +8,6 @@ class Procedure(Base):
   __tablename__='t_precedures'
   id=Column(Integer,primary_key=True,autoincrement=True)
   name=Column(String(100))
-  owners=Column(String(500))
   max_process=Column(Integer)
   
   def __init__(self,**args):
@@ -34,4 +33,8 @@ class ProcedurDepends:
     self.__dict__.update(args)    
     
 
-  
+from engine import session
+procedure=Procedure(name='procedure_test',max_process=10)
+session.add(procedure)
+print procedure.id
+session.commit()  

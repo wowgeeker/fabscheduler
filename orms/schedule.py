@@ -20,6 +20,6 @@ class Schedule(Base):
   def update_nextime(self,current=None):
     if not current:
       self.last_time=self.next_time
-      self.next_time+=span
+      self.next_time+=self.span
     else:
-      self.next_time=self.next_time+span*((current-self.next_time)/span+1)
+      self.next_time=self.next_time+self.span*((current-self.next_time)/self.span+1)
